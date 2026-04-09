@@ -17,6 +17,7 @@ target/
 target/
 .idea/
 *.iml
+*.yaml
 
 ### NetBeans ###
 /nbproject/private/
