@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.OrderMapper">
+
+    <select id="selectPage" resultType="com.pethub.pojo.vo.OrderVO">
+        select
+            o.id,
+            o.order_no as orderNo,
+            u.username,
+            p.name as petName,
+            o.amount,
+            o.status,
+            o.contact_name as contactName,
+            o.contact_phone as contactPhone,
+            o.address,
+            o.remark,
+            o.create_time as createTime
+        from orders o
+        left join user u on o.user_id = u.id
+        left join pet p on o.pet_id = p.id
+        <where>
+            o.is_deleted = 0
+            <if test="orderNo != null and orderNo != ''">
+                and o.order_no like concat('%', #{orderNo}, '%')
+            </if>
+            <if test="username != null and username != ''">
+                and u.username like concat('%', #{username}, '%')
+            </if>
+            <if test="petName != null and petName != ''">
+                and p.name like concat('%', #{petName}, '%')
+            </if>
+            <if test="status != null">
+                and o.status = #{status}
+            </if>
+            <if test="createTime != null and createTime != ''">
+                and date_format(o.create_time, '%Y-%m-%d') = #{createTime}
+            </if>
+        </where>
+        order by o.create_time desc
+    </select>
+
+    <select id="selectDetailById" resultType="com.pethub.pojo.vo.OrderDetailVO">
+        select
+            o.id,
+            o.order_no as orderNo,
+            u.username,
+            p.name as petName,
+            o.amount,
+            o.status,
+            o.contact_name as contactName,
+            o.contact_phone as contactPhone,
+            o.address,
+            o.remark,
+            o.create_time as createTime
+        from orders o
+        left join user u on o.user_id = u.id
+        left join pet p on o.pet_id = p.id
+        where o.id = #{id}
+          and o.is_deleted = 0
+        limit 1
+    </select>
+
+    <select id="selectEntityById" resultType="com.pethub.pojo.entity.Orders">
+        select
+            id,
+            order_no as orderNo,
+            user_id as userId,
+            pet_id as petId,
+            amount,
+            status,
+            contact_name as contactName,
+            contact_phone as contactPhone,
+            address,
+            remark,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from orders
+        where id = #{id}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <update id="updateStatusById">
+        update orders
+        set status = #{status}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="deleteById">
+        update orders
+        set is_deleted = 1
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+</mapper>

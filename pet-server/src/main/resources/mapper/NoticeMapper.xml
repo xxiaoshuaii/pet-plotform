@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.NoticeMapper">
+
+    <select id="selectList" resultType="com.pethub.pojo.vo.NoticeVO">
+        select
+            id,
+            type,
+            title,
+            content,
+            is_read as isRead,
+            order_id as orderId,
+            create_time as createTime
+        from notice
+        where is_deleted = 0
+        order by create_time desc
+    </select>
+
+    <select id="selectEntityById" resultType="com.pethub.pojo.entity.Notice">
+        select
+            id,
+            type,
+            title,
+            content,
+            is_read as isRead,
+            order_id as orderId,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from notice
+        where id = #{id}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <select id="countUnread" resultType="java.lang.Long">
+        select count(1)
+        from notice
+        where is_deleted = 0
+          and is_read = 0
+    </select>
+
+    <update id="readById">
+        update notice
+        set is_read = 1
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="readAll">
+        update notice
+        set is_read = 1
+        where is_deleted = 0
+          and is_read = 0
+    </update>
+
+</mapper>

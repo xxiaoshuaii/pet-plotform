@@ -25,5 +25,7 @@ public class OrderVO implements Serializable {
     private Integer status;
     private String contactName;
     private String contactPhone;
+    private String address;
+    private String remark;
     private LocalDateTime createTime;
 }

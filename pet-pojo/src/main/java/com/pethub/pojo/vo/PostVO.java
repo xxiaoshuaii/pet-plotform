@@ -19,6 +19,7 @@ public class PostVO implements Serializable {
     private Long id;
     private String coverUrl;
     private String title;
+    private String content;
     private String username;
     private Integer likeCount;
     private Integer commentCount;
