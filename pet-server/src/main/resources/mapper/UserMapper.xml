@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.UserMapper">
+
+    <select id="selectPage" resultType="com.pethub.pojo.vo.UserVO">
+        select
+            id,
+            avatar,
+            username,
+            phone,
+            email,
+            role,
+            status,
+            intro,
+            create_time as createTime
+        from user
+        <where>
+            is_deleted = 0
+            <if test="username != null and username != ''">
+                and username like concat('%', #{username}, '%')
+            </if>
+            <if test="phone != null and phone != ''">
+                and phone like concat('%', #{phone}, '%')
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectById" resultType="com.pethub.pojo.vo.UserDetailVO">
+        select
+            id,
+            avatar,
+            username,
+            phone,
+            email,
+            role,
+            status,
+            intro,
+            create_time as createTime
+        from user
+        where id = #{id}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <update id="updateStatusById">
+        update user
+        set status = #{status}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+</mapper>

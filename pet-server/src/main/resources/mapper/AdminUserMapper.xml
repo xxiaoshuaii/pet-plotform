@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.AdminUserMapper">
+
+    <select id="selectByUsername" resultType="com.pethub.pojo.entity.AdminUser">
+        select
+            id,
+            username,
+            password,
+            nickname,
+            phone,
+            email,
+            avatar,
+            status,
+            last_login_time as lastLoginTime,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from admin_user
+        where username = #{username}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+</mapper>
