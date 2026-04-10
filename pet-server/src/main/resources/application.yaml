@@ -4,23 +4,28 @@ spring:
   main:
     allow-circular-references: true
   datasource:
-    druid:
-      driver-class-name: ${pet.datasource.driver-class-name}
-      url: jdbc:mysql://${pet.datasource.host}:${pet.datasource.port}/${pet.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
-      username: ${pet.datasource.username}
-      password: ${pet.datasource.password}
+    driver-class-name: ${pet.datasource.driver-class-name}
+    url: jdbc:mysql://${pet.datasource.host}:${pet.datasource.port}/${pet.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${pet.datasource.username}
+    password: ${pet.datasource.password}
+
 mybatis:
-  #mapper配置文件
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.sky.entity
+  type-aliases-package: com.pethub.pojo.entity
   configuration:
-    #开启驼峰命名
     map-underscore-to-camel-case: true
 
 logging:
   level:
     com:
-      sky:
+      pethub:
         mapper: debug
         service: info
         controller: info
+
+pethub:
+  jwt:
+    secret-key: pethub-admin-secret-key-please-change-32
+    ttl: 72000000
+    token-name: Authorization
+    algorithm: HS256
