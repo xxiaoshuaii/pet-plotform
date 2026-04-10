@@ -3,9 +3,11 @@ package com.pethub.service.impl;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.pethub.common.exception.BusinessException;
+import com.pethub.mapper.CategoryMapper;
 import com.pethub.mapper.PetMapper;
 import com.pethub.pojo.dto.PetSaveDTO;
 import com.pethub.pojo.dto.PetStatusDTO;
+import com.pethub.pojo.entity.Category;
 import com.pethub.pojo.entity.Pet;
 import com.pethub.pojo.query.PetQuery;
 import com.pethub.pojo.vo.PageResultVO;
@@ -21,6 +23,7 @@ import java.util.List;
 public class PetServiceImpl implements PetService {
 
     private final PetMapper petMapper;
+    private final CategoryMapper categoryMapper;
 
     @Override
     public PageResultVO<PetVO> page(PetQuery query) {
@@ -51,6 +54,7 @@ public class PetServiceImpl implements PetService {
     @Override
     public void update(Long id, PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
+
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
             throw new BusinessException("宠物不存在");
@@ -80,6 +84,11 @@ public class PetServiceImpl implements PetService {
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
             throw new BusinessException("宠物不存在");
+        }
+
+        // 手动上架前，再次校验所属分类是否仍处于启用状态。
+        if (petStatusDTO.getStatus() == 1) {
+            ensureCategoryEnabled(pet.getCategoryId());
         }
 
         int rows = petMapper.updateStatusById(id, petStatusDTO.getStatus());
@@ -112,6 +121,22 @@ public class PetServiceImpl implements PetService {
         }
         if (petSaveDTO.getStatus() == null) {
             throw new BusinessException("宠物状态不能为空");
+        }
+
+        // 新增、编辑宠物时，不允许把宠物挂到已停用的分类下。
+        ensureCategoryEnabled(petSaveDTO.getCategoryId());
+    }
+
+    /**
+     * 宠物只有挂在启用状态的分类下，才允许新增、编辑或手动上架。
+     */
+    private void ensureCategoryEnabled(Long categoryId) {
+        Category category = categoryMapper.selectEntityById(categoryId);
+        if (category == null) {
+            throw new BusinessException("宠物分类不存在");
+        }
+        if (category.getStatus() != null && category.getStatus() == 0) {
+            throw new BusinessException("当前分类已停用，不能保存或上架宠物");
         }
     }
 }

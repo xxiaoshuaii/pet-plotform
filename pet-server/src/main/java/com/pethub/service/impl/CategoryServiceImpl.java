@@ -4,6 +4,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.pethub.common.exception.BusinessException;
 import com.pethub.mapper.CategoryMapper;
+import com.pethub.mapper.PetMapper;
 import com.pethub.pojo.dto.CategorySaveDTO;
 import com.pethub.pojo.dto.CategoryStatusDTO;
 import com.pethub.pojo.entity.Category;
@@ -21,6 +22,7 @@ import java.util.List;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryMapper categoryMapper;
+    private final PetMapper petMapper;
 
     @Override
     public PageResultVO<CategoryVO> page(CategoryQuery query) {
@@ -64,14 +66,21 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         Category sameNameCategory = categoryMapper.selectByName(categorySaveDTO.getName());
-        if (sameNameCategory != null && !sameNameCategory.getId().equals(id)
-                && sameNameCategory.getIsDeleted() != null && sameNameCategory.getIsDeleted() == 0) {
+        if (sameNameCategory != null
+                && !sameNameCategory.getId().equals(id)
+                && sameNameCategory.getIsDeleted() != null
+                && sameNameCategory.getIsDeleted() == 0) {
             throw new BusinessException("分类名称已存在");
         }
 
         int rows = categoryMapper.updateById(id, categorySaveDTO);
         if (rows < 1) {
             throw new BusinessException("更新分类失败");
+        }
+
+        // 如果编辑时把分类改成停用，也同步下架该分类下所有上架中的宠物。
+        if (categorySaveDTO.getStatus() == 0) {
+            petMapper.batchOffShelfByCategoryId(id);
         }
     }
 
@@ -98,6 +107,11 @@ public class CategoryServiceImpl implements CategoryService {
         int rows = categoryMapper.updateStatusById(id, categoryStatusDTO.getStatus());
         if (rows < 1) {
             throw new BusinessException("更新分类状态失败");
+        }
+
+        // 分类停用后，关联宠物不能继续保持上架状态，所以统一自动下架。
+        if (categoryStatusDTO.getStatus() == 0) {
+            petMapper.batchOffShelfByCategoryId(id);
         }
     }
 

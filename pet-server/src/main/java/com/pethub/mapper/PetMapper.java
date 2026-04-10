@@ -23,4 +23,9 @@ public interface PetMapper {
     int deleteById(@Param("id") Long id);
 
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
+
+    /**
+     * 分类停用时，批量下架该分类下仍在上架中的宠物。
+     */
+    int batchOffShelfByCategoryId(@Param("categoryId") Long categoryId);
 }
