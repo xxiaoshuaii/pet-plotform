@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.PostMapper">
+
+    <select id="selectPage" resultType="com.pethub.pojo.vo.PostVO">
+        select
+            p.id,
+            p.cover_url as coverUrl,
+            p.title,
+            p.content,
+            u.username,
+            p.like_count as likeCount,
+            p.comment_count as commentCount,
+            p.status,
+            p.create_time as createTime
+        from post p
+        left join user u on p.user_id = u.id
+        <where>
+            p.is_deleted = 0
+            <if test="title != null and title != ''">
+                and p.title like concat('%', #{title}, '%')
+            </if>
+            <if test="username != null and username != ''">
+                and u.username like concat('%', #{username}, '%')
+            </if>
+            <if test="status != null">
+                and p.status = #{status}
+            </if>
+        </where>
+        order by p.create_time desc
+    </select>
+
+    <select id="selectDetailById" resultType="com.pethub.pojo.vo.PostDetailVO">
+        select
+            p.id,
+            p.cover_url as coverUrl,
+            p.title,
+            p.content,
+            u.username,
+            p.like_count as likeCount,
+            p.comment_count as commentCount,
+            p.status,
+            p.reject_reason as rejectReason,
+            p.create_time as createTime
+        from post p
+        left join user u on p.user_id = u.id
+        where p.id = #{id}
+          and p.is_deleted = 0
+        limit 1
+    </select>
+
+    <select id="selectEntityById" resultType="com.pethub.pojo.entity.Post">
+        select
+            id,
+            user_id as userId,
+            cover_url as coverUrl,
+            title,
+            content,
+            like_count as likeCount,
+            comment_count as commentCount,
+            status,
+            reject_reason as rejectReason,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from post
+        where id = #{id}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <update id="updateStatusById">
+        update post
+        set status = #{status},
+            reject_reason = #{rejectReason}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="deleteById">
+        update post
+        set is_deleted = 1
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+</mapper>
