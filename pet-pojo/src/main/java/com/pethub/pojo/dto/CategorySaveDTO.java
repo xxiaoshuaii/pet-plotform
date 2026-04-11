@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -19,4 +20,6 @@ public class CategorySaveDTO implements Serializable {
     private String name;
     private Integer status;
     private String remark;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

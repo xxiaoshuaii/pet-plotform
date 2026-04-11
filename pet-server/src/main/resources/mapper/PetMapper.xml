@@ -73,7 +73,9 @@
             description,
             health_status,
             vaccine_info,
-            status
+            status,
+            create_time,
+            update_time
         ) values (
             #{name},
             #{categoryId},
@@ -86,7 +88,9 @@
             #{description},
             #{healthStatus},
             #{vaccineInfo},
-            #{status}
+            #{status},
+            #{createTime},
+            #{updateTime}
         )
     </insert>
 
@@ -103,7 +107,8 @@
             description = #{pet.description},
             health_status = #{pet.healthStatus},
             vaccine_info = #{pet.vaccineInfo},
-            status = #{pet.status}
+            status = #{pet.status},
+            update_time = #{pet.updateTime}
         where id = #{id}
           and is_deleted = 0
     </update>

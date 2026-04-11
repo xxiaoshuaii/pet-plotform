@@ -55,11 +55,15 @@
         insert into category (
             name,
             status,
-            remark
+            remark,
+            create_time,
+            update_time
         ) values (
             #{name},
             #{status},
-            #{remark}
+            #{remark},
+            #{createTime},
+            #{updateTime}
         )
     </insert>
 
@@ -67,7 +71,8 @@
         update category
         set name = #{category.name},
             status = #{category.status},
-            remark = #{category.remark}
+            remark = #{category.remark},
+            update_time = #{category.updateTime}
         where id = #{id}
           and is_deleted = 0
     </update>

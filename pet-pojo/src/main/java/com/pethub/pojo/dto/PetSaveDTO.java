@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -29,4 +30,6 @@ public class PetSaveDTO implements Serializable {
     private String healthStatus;
     private String vaccineInfo;
     private Integer status;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

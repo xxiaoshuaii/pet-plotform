@@ -19,4 +19,8 @@ public interface NoticeMapper {
     int readById(@Param("id") Long id);
 
     int readAll();
+
+    int softDeleteByOrderId(@Param("orderId") Long orderId);
+
+    int insert(Notice notice);
 }

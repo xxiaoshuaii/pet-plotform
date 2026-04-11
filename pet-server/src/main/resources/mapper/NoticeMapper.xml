@@ -2,6 +2,19 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.pethub.mapper.NoticeMapper">
 
+    <sql id="LatestNoticeFilter">
+        and (
+            order_id is null
+            or id in (
+                select max(n2.id)
+                from notice n2
+                where n2.is_deleted = 0
+                  and n2.order_id is not null
+                group by n2.order_id
+            )
+        )
+    </sql>
+
     <select id="selectList" resultType="com.pethub.pojo.vo.NoticeVO">
         select
             id,
@@ -10,9 +23,11 @@
             content,
             is_read as isRead,
             order_id as orderId,
-            create_time as createTime
+            create_time as createTime,
+            update_time as updateTime
         from notice
         where is_deleted = 0
+        <include refid="LatestNoticeFilter" />
         order by create_time desc
     </select>
 
@@ -38,6 +53,7 @@
         from notice
         where is_deleted = 0
           and is_read = 0
+        <include refid="LatestNoticeFilter" />
     </select>
 
     <update id="readById">
@@ -53,5 +69,32 @@
         where is_deleted = 0
           and is_read = 0
     </update>
+
+    <update id="softDeleteByOrderId">
+        update notice
+        set is_deleted = 1
+        where order_id = #{orderId}
+          and is_deleted = 0
+    </update>
+
+    <insert id="insert" parameterType="com.pethub.pojo.entity.Notice" useGeneratedKeys="true" keyProperty="id">
+        insert into notice (
+            type,
+            title,
+            content,
+            is_read,
+            order_id,
+            create_time,
+            update_time
+        ) values (
+            #{type},
+            #{title},
+            #{content},
+            #{isRead},
+            #{orderId},
+            #{createTime},
+            #{updateTime}
+        )
+    </insert>
 
 </mapper>

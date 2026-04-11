@@ -10,9 +10,11 @@ import com.pethub.pojo.query.OrderQuery;
 import com.pethub.pojo.vo.OrderDetailVO;
 import com.pethub.pojo.vo.OrderVO;
 import com.pethub.pojo.vo.PageResultVO;
+import com.pethub.service.NoticeService;
 import com.pethub.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +23,7 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
+    private final NoticeService noticeService;
 
     @Override
     public PageResultVO<OrderVO> page(OrderQuery query) {
@@ -49,6 +52,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, OrderStatusDTO orderStatusDTO) {
         if (orderStatusDTO.getStatus() == null) {
             throw new BusinessException("订单状态不能为空");
@@ -66,6 +70,11 @@ public class OrderServiceImpl implements OrderService {
         if (rows < 1) {
             throw new BusinessException("更新订单状态失败");
         }
+
+        // 订单状态变更后，通知中心里对应订单的状态文案也要同步刷新。
+        // 放在同一个事务里，避免出现订单已更新但通知还是旧状态的情况。
+        orders.setStatus(orderStatusDTO.getStatus());
+        noticeService.syncOrderStatusNotice(orders);
     }
 
     @Override

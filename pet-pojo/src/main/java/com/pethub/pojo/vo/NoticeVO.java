@@ -23,4 +23,5 @@ public class NoticeVO implements Serializable {
     private Integer isRead;
     private Long orderId;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }
