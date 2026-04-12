@@ -119,6 +119,24 @@ CREATE TABLE notice (
     INDEX idx_notice_create_time (create_time)
 ) COMMENT='后台通知表';
 
+CREATE TABLE user_address (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    contact_name VARCHAR(50) NOT NULL COMMENT '联系人',
+    contact_phone VARCHAR(20) NOT NULL COMMENT '联系电话',
+    province VARCHAR(50) NOT NULL COMMENT '省份',
+    city VARCHAR(50) NOT NULL COMMENT '城市',
+    district VARCHAR(50) NOT NULL COMMENT '区县',
+    detail_address VARCHAR(255) NOT NULL COMMENT '详细地址',
+    tag VARCHAR(30) DEFAULT NULL COMMENT '地址标签',
+    is_default TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认地址：1是 0否',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_user_address_user_id (user_id),
+    INDEX idx_user_address_is_default (is_default)
+) COMMENT='用户收货地址表';
+
 CREATE TABLE order_status_log (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     order_id BIGINT NOT NULL COMMENT '订单ID',
@@ -140,6 +158,9 @@ ALTER TABLE post
 ALTER TABLE orders
     ADD CONSTRAINT fk_orders_user_id FOREIGN KEY (user_id) REFERENCES user(id),
     ADD CONSTRAINT fk_orders_pet_id FOREIGN KEY (pet_id) REFERENCES pet(id);
+
+ALTER TABLE user_address
+    ADD CONSTRAINT fk_user_address_user_id FOREIGN KEY (user_id) REFERENCES user(id);
 
 ALTER TABLE notice
     ADD CONSTRAINT fk_notice_order_id FOREIGN KEY (order_id) REFERENCES orders(id);
