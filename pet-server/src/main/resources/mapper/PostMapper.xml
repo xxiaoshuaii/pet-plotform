@@ -11,10 +11,12 @@
             u.username,
             p.like_count as likeCount,
             p.comment_count as commentCount,
+            case when pl.id is null then false else true end as liked,
             p.status,
             p.create_time as createTime
         from post p
         left join user u on p.user_id = u.id
+        left join post_like pl on pl.post_id = p.id and pl.user_id = #{currentUserId}
         <where>
             p.is_deleted = 0
             <if test="title != null and title != ''">
@@ -30,6 +32,26 @@
         order by p.create_time desc
     </select>
 
+    <select id="selectPageByUserId" resultType="com.pethub.pojo.vo.PostVO">
+        select
+            p.id,
+            p.cover_url as coverUrl,
+            p.title,
+            p.content,
+            u.username,
+            p.like_count as likeCount,
+            p.comment_count as commentCount,
+            case when pl.id is null then false else true end as liked,
+            p.status,
+            p.create_time as createTime
+        from post p
+        left join user u on p.user_id = u.id
+        left join post_like pl on pl.post_id = p.id and pl.user_id = #{userId}
+        where p.user_id = #{userId}
+          and p.is_deleted = 0
+        order by p.create_time desc
+    </select>
+
     <select id="selectDetailById" resultType="com.pethub.pojo.vo.PostDetailVO">
         select
             p.id,
@@ -39,11 +61,13 @@
             u.username,
             p.like_count as likeCount,
             p.comment_count as commentCount,
+            case when pl.id is null then false else true end as liked,
             p.status,
             p.reject_reason as rejectReason,
             p.create_time as createTime
         from post p
         left join user u on p.user_id = u.id
+        left join post_like pl on pl.post_id = p.id and pl.user_id = #{currentUserId}
         where p.id = #{id}
           and p.is_deleted = 0
         limit 1
@@ -69,6 +93,75 @@
         limit 1
     </select>
 
+    <select id="selectEntityByIdAndUserId" resultType="com.pethub.pojo.entity.Post">
+        select
+            id,
+            user_id as userId,
+            cover_url as coverUrl,
+            title,
+            content,
+            like_count as likeCount,
+            comment_count as commentCount,
+            status,
+            reject_reason as rejectReason,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from post
+        where id = #{id}
+          and user_id = #{userId}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="post.id">
+        insert into post (
+            user_id,
+            cover_url,
+            title,
+            content,
+            like_count,
+            comment_count,
+            status,
+            reject_reason
+        ) values (
+            #{userId},
+            #{post.coverUrl},
+            #{post.title},
+            #{post.content},
+            0,
+            0,
+            0,
+            null
+        )
+    </insert>
+
+    <update id="updateByIdAndUserId">
+        update post
+        set cover_url = #{post.coverUrl},
+            title = #{post.title},
+            content = #{post.content},
+            status = 0,
+            reject_reason = null
+        where id = #{id}
+          and user_id = #{userId}
+          and is_deleted = 0
+    </update>
+
+    <update id="updateLikeCount">
+        update post
+        set like_count = #{likeCount}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="updateCommentCount">
+        update post
+        set comment_count = #{commentCount}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
     <update id="updateStatusById">
         update post
         set status = #{status},
@@ -81,6 +174,14 @@
         update post
         set is_deleted = 1
         where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="deleteByIdAndUserId">
+        update post
+        set is_deleted = 1
+        where id = #{id}
+          and user_id = #{userId}
           and is_deleted = 0
     </update>
 

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.PostLikeMapper">
+
+    <select id="selectByPostIdAndUserId" resultType="com.pethub.pojo.entity.PostLike">
+        select
+            id,
+            post_id as postId,
+            user_id as userId,
+            create_time as createTime
+        from post_like
+        where post_id = #{postId}
+          and user_id = #{userId}
+        limit 1
+    </select>
+
+    <insert id="insert">
+        insert into post_like (post_id, user_id)
+        values (#{postId}, #{userId})
+    </insert>
+
+    <delete id="deleteByPostIdAndUserId">
+        delete from post_like
+        where post_id = #{postId}
+          and user_id = #{userId}
+    </delete>
+
+    <select id="countByPostId" resultType="java.lang.Integer">
+        select count(1)
+        from post_like
+        where post_id = #{postId}
+    </select>
+
+</mapper>

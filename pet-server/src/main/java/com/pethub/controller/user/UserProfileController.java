@@ -2,16 +2,18 @@ package com.pethub.controller.user;
 
 import com.pethub.common.context.BaseContext;
 import com.pethub.common.result.Result;
+import com.pethub.pojo.dto.UserProfileUpdateDTO;
 import com.pethub.pojo.vo.UserDetailVO;
 import com.pethub.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户端个人中心接口。
- * 这里提供当前登录用户的基础资料，给前端个人中心直接展示使用。
+ * 用户端个人资料接口。
  */
 @RestController
 @RequiredArgsConstructor
@@ -22,10 +24,18 @@ public class UserProfileController {
 
     /**
      * 获取当前登录用户资料。
-     * 用户身份由 JWT 拦截器解析后放入上下文，这里直接读取当前用户 ID。
      */
     @GetMapping
     public Result<UserDetailVO> profile() {
         return Result.success(userService.getById(BaseContext.getCurrentId()));
+    }
+
+    /**
+     * 更新当前登录用户资料。
+     */
+    @PutMapping
+    public Result<Void> updateProfile(@RequestBody UserProfileUpdateDTO userProfileUpdateDTO) {
+        userService.updateProfile(BaseContext.getCurrentId(), userProfileUpdateDTO);
+        return Result.success();
     }
 }

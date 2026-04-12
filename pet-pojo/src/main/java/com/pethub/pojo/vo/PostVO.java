@@ -23,6 +23,7 @@ public class PostVO implements Serializable {
     private String username;
     private Integer likeCount;
     private Integer commentCount;
+    private Boolean liked;
     private Integer status;
     private LocalDateTime createTime;
 }

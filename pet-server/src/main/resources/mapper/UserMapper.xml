@@ -66,6 +66,15 @@
         limit 1
     </select>
 
+    <update id="updateProfileById">
+        update user
+        set avatar = #{profile.avatar},
+            email = #{profile.email},
+            intro = #{profile.intro}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
     <update id="updateStatusById">
         update user
         set status = #{status}

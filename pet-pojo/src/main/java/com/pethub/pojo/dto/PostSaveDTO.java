@@ -1,4 +1,4 @@
-package com.pethub.pojo.query;
+package com.pethub.pojo.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,15 +10,13 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PostQuery implements Serializable {
+public class PostSaveDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private Long id;
+    private String coverUrl;
     private String title;
-    private String username;
-    private Integer status;
-    private Long currentUserId;
-    private Integer pageNum;
-    private Integer pageSize;
+    private String content;
 }

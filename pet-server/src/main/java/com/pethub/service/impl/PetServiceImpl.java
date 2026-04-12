@@ -34,12 +34,7 @@ public class PetServiceImpl implements PetService {
         List<PetVO> records = petMapper.selectPage(query);
         PageInfo<PetVO> pageInfo = new PageInfo<>(records);
 
-        return new PageResultVO<>(
-                pageInfo.getList(),
-                pageInfo.getTotal(),
-                pageInfo.getPageNum(),
-                pageInfo.getPageSize()
-        );
+        return new PageResultVO<>(pageInfo.getList(), pageInfo.getTotal(), pageInfo.getPageNum(), pageInfo.getPageSize());
     }
 
     @Override
@@ -54,6 +49,8 @@ public class PetServiceImpl implements PetService {
     @Override
     public void save(PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
+        normalizeStatusByStock(petSaveDTO);
+
         int rows = petMapper.insert(petSaveDTO);
         if (rows < 1) {
             throw new BusinessException("新增宠物失败");
@@ -63,6 +60,7 @@ public class PetServiceImpl implements PetService {
     @Override
     public void update(Long id, PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
+        normalizeStatusByStock(petSaveDTO);
 
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
@@ -95,9 +93,11 @@ public class PetServiceImpl implements PetService {
             throw new BusinessException("宠物不存在");
         }
 
-        // 手动上架前，再次校验所属分类是否仍处于启用状态。
         if (petStatusDTO.getStatus() == 1) {
             ensureCategoryEnabled(pet.getCategoryId());
+            if (pet.getStock() == null || pet.getStock() <= 0) {
+                throw new BusinessException("库存为 0 的宠物不能上架");
+            }
         }
 
         int rows = petMapper.updateStatusById(id, petStatusDTO.getStatus());
@@ -132,13 +132,15 @@ public class PetServiceImpl implements PetService {
             throw new BusinessException("宠物状态不能为空");
         }
 
-        // 新增、编辑宠物时，不允许把宠物挂到已停用的分类下。
         ensureCategoryEnabled(petSaveDTO.getCategoryId());
     }
 
-    /**
-     * 宠物只有挂在启用状态的分类下，才允许新增、编辑或手动上架。
-     */
+    private void normalizeStatusByStock(PetSaveDTO petSaveDTO) {
+        if (petSaveDTO.getStock() != null && petSaveDTO.getStock() <= 0) {
+            petSaveDTO.setStatus(0);
+        }
+    }
+
     private void ensureCategoryEnabled(Long categoryId) {
         Category category = categoryMapper.selectEntityById(categoryId);
         if (category == null) {
