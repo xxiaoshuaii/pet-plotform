@@ -4,18 +4,26 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.pethub.common.exception.BusinessException;
 import com.pethub.mapper.OrderMapper;
+import com.pethub.mapper.PetMapper;
+import com.pethub.mapper.UserMapper;
+import com.pethub.pojo.dto.OrderCreateDTO;
 import com.pethub.pojo.dto.OrderStatusDTO;
 import com.pethub.pojo.entity.Orders;
+import com.pethub.pojo.entity.Pet;
 import com.pethub.pojo.query.OrderQuery;
+import com.pethub.pojo.vo.OrderCreateVO;
 import com.pethub.pojo.vo.OrderDetailVO;
 import com.pethub.pojo.vo.OrderVO;
 import com.pethub.pojo.vo.PageResultVO;
+import com.pethub.pojo.vo.UserDetailVO;
 import com.pethub.service.NoticeService;
 import com.pethub.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -23,6 +31,8 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderMapper orderMapper;
+    private final PetMapper petMapper;
+    private final UserMapper userMapper;
     private final NoticeService noticeService;
 
     @Override
@@ -40,6 +50,55 @@ public class OrderServiceImpl implements OrderService {
                 pageInfo.getPageNum(),
                 pageInfo.getPageSize()
         );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public OrderCreateVO create(Long userId, OrderCreateDTO orderCreateDTO) {
+        validateCreateOrder(userId, orderCreateDTO);
+
+        UserDetailVO userDetailVO = userMapper.selectById(userId);
+        if (userDetailVO == null) {
+            throw new BusinessException("用户不存在");
+        }
+        if (userDetailVO.getStatus() != null && userDetailVO.getStatus() == 0) {
+            throw new BusinessException("当前用户已被禁用，无法下单");
+        }
+
+        Pet pet = petMapper.selectEntityById(orderCreateDTO.getPetId());
+        if (pet == null) {
+            throw new BusinessException("宠物不存在");
+        }
+        if (pet.getStatus() == null || pet.getStatus() != 1) {
+            throw new BusinessException("当前宠物暂不可下单");
+        }
+        if (pet.getStock() == null || pet.getStock() < 1) {
+            throw new BusinessException("当前宠物库存不足");
+        }
+
+        int stockRows = petMapper.decreaseStockById(pet.getId());
+        if (stockRows < 1) {
+            throw new BusinessException("当前宠物库存不足，请刷新后重试");
+        }
+
+        Orders orders = new Orders();
+        orders.setOrderNo(generateOrderNo());
+        orders.setUserId(userId);
+        orders.setPetId(pet.getId());
+        orders.setAmount(pet.getPrice());
+        orders.setStatus(0);
+        orders.setContactName(orderCreateDTO.getContactName().trim());
+        orders.setContactPhone(orderCreateDTO.getContactPhone().trim());
+        orders.setAddress(orderCreateDTO.getAddress().trim());
+        orders.setRemark(orderCreateDTO.getRemark() == null ? null : orderCreateDTO.getRemark().trim());
+
+        int rows = orderMapper.insert(orders);
+        if (rows < 1) {
+            throw new BusinessException("创建订单失败");
+        }
+
+        noticeService.syncOrderStatusNotice(orders);
+        return new OrderCreateVO(orders.getId(), orders.getOrderNo());
     }
 
     @Override
@@ -71,8 +130,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("更新订单状态失败");
         }
 
-        // 订单状态变更后，通知中心里对应订单的状态文案也要同步刷新。
-        // 放在同一个事务里，避免出现订单已更新但通知还是旧状态的情况。
+        // 订单状态变更后，同步刷新通知中心中对应订单的最新状态文案。
         orders.setStatus(orderStatusDTO.getStatus());
         noticeService.syncOrderStatusNotice(orders);
     }
@@ -84,5 +142,30 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("订单不存在");
         }
         return orderMapper.deleteById(id) > 0;
+    }
+
+    private void validateCreateOrder(Long userId, OrderCreateDTO orderCreateDTO) {
+        if (userId == null) {
+            throw new BusinessException("未登录或登录已失效");
+        }
+        if (orderCreateDTO == null) {
+            throw new BusinessException("下单参数不能为空");
+        }
+        if (orderCreateDTO.getPetId() == null) {
+            throw new BusinessException("宠物 ID 不能为空");
+        }
+        if (orderCreateDTO.getContactName() == null || orderCreateDTO.getContactName().isBlank()) {
+            throw new BusinessException("联系人不能为空");
+        }
+        if (orderCreateDTO.getContactPhone() == null || orderCreateDTO.getContactPhone().isBlank()) {
+            throw new BusinessException("联系电话不能为空");
+        }
+        if (orderCreateDTO.getAddress() == null || orderCreateDTO.getAddress().isBlank()) {
+            throw new BusinessException("联系地址不能为空");
+        }
+    }
+
+    private String generateOrderNo() {
+        return "PETU" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
     }
 }

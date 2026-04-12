@@ -30,6 +30,12 @@ public interface PetMapper {
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
 
     /**
+     * 扣减宠物库存。
+     * 仅当库存大于 0 时扣减成功，扣减为 0 后自动下架。
+     */
+    int decreaseStockById(@Param("id") Long id);
+
+    /**
      * 分类停用时，批量下架该分类下仍在上架中的宠物。
      */
     int batchOffShelfByCategoryId(@Param("categoryId") Long categoryId);

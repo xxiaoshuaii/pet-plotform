@@ -18,6 +18,8 @@ public interface OrderMapper {
 
     Orders selectEntityById(@Param("id") Long id);
 
+    int insert(Orders orders);
+
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
 
     int deleteById(@Param("id") Long id);

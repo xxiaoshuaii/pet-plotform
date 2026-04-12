@@ -151,6 +151,15 @@
           and is_deleted = 0
     </update>
 
+    <update id="decreaseStockById">
+        update pet
+        set stock = stock - 1,
+            status = case when stock - 1 &lt;= 0 then 0 else status end
+        where id = #{id}
+          and is_deleted = 0
+          and stock > 0
+    </update>
+
     <update id="batchOffShelfByCategoryId">
         update pet
         set status = 0

@@ -81,6 +81,34 @@
         limit 1
     </select>
 
+    <insert id="insert" parameterType="com.pethub.pojo.entity.Orders" useGeneratedKeys="true" keyProperty="id">
+        insert into orders (
+            order_no,
+            user_id,
+            pet_id,
+            amount,
+            status,
+            contact_name,
+            contact_phone,
+            address,
+            remark,
+            create_time,
+            update_time
+        ) values (
+            #{orderNo},
+            #{userId},
+            #{petId},
+            #{amount},
+            #{status},
+            #{contactName},
+            #{contactPhone},
+            #{address},
+            #{remark},
+            #{createTime},
+            #{updateTime}
+        )
+    </insert>
+
     <update id="updateStatusById">
         update orders
         set status = #{status}
