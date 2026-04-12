@@ -29,6 +29,26 @@
         order by create_time desc
     </select>
 
+    <select id="selectEntityByUsernameOrPhone" resultType="com.pethub.pojo.entity.User">
+        select
+            id,
+            avatar,
+            username,
+            password,
+            phone,
+            email,
+            role,
+            status,
+            intro,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from user
+        where is_deleted = 0
+          and (username = #{keyword} or phone = #{keyword})
+        limit 1
+    </select>
+
     <select id="selectById" resultType="com.pethub.pojo.vo.UserDetailVO">
         select
             id,

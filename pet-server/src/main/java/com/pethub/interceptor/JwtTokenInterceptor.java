@@ -10,14 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/**
- * JWT 登录拦截器。
- * 作用：
- * 1. 从请求头里取出 token
- * 2. 校验 token 是否合法
- * 3. 合法则放行，并把当前登录人写入 BaseContext
- * 4. 请求结束后清理 BaseContext
- */
 @Component
 @RequiredArgsConstructor
 public class JwtTokenInterceptor implements HandlerInterceptor {
@@ -27,7 +19,6 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 浏览器预检请求直接放行。
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
@@ -36,11 +27,10 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         if (authorization == null || authorization.isBlank()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":0,\"msg\":\"未登录或token为空\",\"data\":null}");
+            response.getWriter().write("{\"code\":0,\"msg\":\"未登录或 token 为空\",\"data\":null}");
             return false;
         }
 
-        // 前端当前传的是 Bearer token，这里去掉前缀后再解析。
         String token = authorization.startsWith("Bearer ")
                 ? authorization.substring(7)
                 : authorization;
@@ -48,20 +38,21 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         try {
             Claims claims = jwtUtil.parseToken(token);
             Long adminId = claims.get("adminId", Long.class);
+            Long userId = claims.get("userId", Long.class);
+            Long currentId = adminId != null ? adminId : userId;
             String username = claims.get("username", String.class);
 
-            // request 中留一份，方便控制器直接取。
             request.setAttribute("adminId", adminId);
+            request.setAttribute("userId", userId);
             request.setAttribute("username", username);
 
-            // BaseContext 中也留一份，方便业务层直接获取当前登录人。
-            BaseContext.setCurrentId(adminId);
+            BaseContext.setCurrentId(currentId);
             BaseContext.setCurrentUsername(username);
             return true;
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":0,\"msg\":\"token无效或已过期\",\"data\":null}");
+            response.getWriter().write("{\"code\":0,\"msg\":\"token 无效或已过期\",\"data\":null}");
             return false;
         }
     }

@@ -36,6 +36,30 @@
         order by p.create_time desc
     </select>
 
+    <select id="selectById" resultType="com.pethub.pojo.vo.PetVO">
+        select
+            p.id,
+            p.name,
+            p.category_id as categoryId,
+            c.name as categoryName,
+            p.breed,
+            p.age,
+            p.gender,
+            p.price,
+            p.stock,
+            p.cover_url as coverUrl,
+            p.description,
+            p.health_status as healthStatus,
+            p.vaccine_info as vaccineInfo,
+            p.status,
+            p.create_time as createTime
+        from pet p
+        left join category c on p.category_id = c.id
+        where p.id = #{id}
+          and p.is_deleted = 0
+        limit 1
+    </select>
+
     <select id="selectEntityById" resultType="com.pethub.pojo.entity.Pet">
         select
             id,

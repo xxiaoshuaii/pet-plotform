@@ -21,6 +21,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 放行登录接口，其余请求统一进入 JWT 校验逻辑。
         registry.addInterceptor(jwtTokenInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/auth/login", "/error");
+                .excludePathPatterns("/auth/login", "/user/auth/login", "/error");
     }
 }

@@ -1,6 +1,7 @@
 package com.pethub.mapper;
 
 import com.pethub.pojo.dto.UserStatusDTO;
+import com.pethub.pojo.entity.User;
 import com.pethub.pojo.query.UserQuery;
 import com.pethub.pojo.vo.UserDetailVO;
 import com.pethub.pojo.vo.UserVO;
@@ -13,6 +14,8 @@ import java.util.List;
 public interface UserMapper {
 
     List<UserVO> selectPage(UserQuery query);
+
+    User selectEntityByUsernameOrPhone(@Param("keyword") String keyword);
 
     UserDetailVO selectById(@Param("id") Long id);
 

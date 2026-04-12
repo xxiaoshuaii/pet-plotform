@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 宠物管理控制器。
+ * 这里同时承担后台列表查询和前端详情查询能力。
  */
 @RestController
 @RequiredArgsConstructor
@@ -34,6 +35,15 @@ public class PetController {
     @GetMapping
     public Result<PageResultVO<PetVO>> page(PetQuery query) {
         return Result.success(petService.page(query));
+    }
+
+    /**
+     * 根据宠物 ID 查询详情。
+     * 这个接口给用户端宠物详情页和后台详情场景共用。
+     */
+    @GetMapping("/{id}")
+    public Result<PetVO> getById(@PathVariable Long id) {
+        return Result.success(petService.getById(id));
     }
 
     /**
@@ -63,7 +73,7 @@ public class PetController {
     }
 
     /**
-     * 更新宠物上架状态。
+     * 更新宠物上下架状态。
      */
     @PatchMapping("/{id}/status")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestBody PetStatusDTO petStatusDTO) {

@@ -10,6 +10,8 @@ public interface PetService {
 
     PageResultVO<PetVO> page(PetQuery query);
 
+    PetVO getById(Long id);
+
     void save(PetSaveDTO petSaveDTO);
 
     void update(Long id, PetSaveDTO petSaveDTO);

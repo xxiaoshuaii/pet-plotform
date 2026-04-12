@@ -13,46 +13,36 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * JWT 工具类。
- * 负责两件事：
- * 1. 登录成功后生成 token
- * 2. 后续请求时解析 token
- */
 @Component
 public class JwtUtil {
 
+    private final JwtProperties jwtProperties;
     private SecretKey secretKey;
+
     public JwtUtil(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
     }
 
-    //构造器注入
-    private final JwtProperties jwtProperties;
-
     @PostConstruct
     public void init() {
-        // 根据配置里的密钥初始化签名 key，后续生成和解析 token 都会用到它。
         this.secretKey = Keys.hmacShaKeyFor(jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
     }
 
     public String createToken(Long adminId, String username) {
-        // token 中只放当前登录管理员的核心信息，不放密码。
         Map<String, Object> claims = new HashMap<>();
         claims.put("adminId", adminId);
         claims.put("username", username);
+        return buildToken(claims, "admin-login");
+    }
 
-        return Jwts.builder()
-                .claims(claims)
-                .subject("admin-login")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getTtl()))
-                .signWith(secretKey, resolveAlgorithm())
-                .compact();
+    public String createUserToken(Long userId, String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("username", username);
+        return buildToken(claims, "user-login");
     }
 
     public Claims parseToken(String token) {
-        // 解析成功后可以拿到 token 中保存的 claims 数据。
         return Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
@@ -60,8 +50,17 @@ public class JwtUtil {
                 .getPayload();
     }
 
+    private String buildToken(Map<String, Object> claims, String subject) {
+        return Jwts.builder()
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getTtl()))
+                .signWith(secretKey, resolveAlgorithm())
+                .compact();
+    }
+
     private io.jsonwebtoken.security.MacAlgorithm resolveAlgorithm() {
-        // 按配置选择签名算法，默认使用 HS256。
         String algorithm = jwtProperties.getAlgorithm();
         if ("HS384".equalsIgnoreCase(algorithm)) {
             return Jwts.SIG.HS384;

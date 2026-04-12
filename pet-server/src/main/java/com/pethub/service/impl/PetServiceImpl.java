@@ -43,6 +43,15 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
+    public PetVO getById(Long id) {
+        PetVO petVO = petMapper.selectById(id);
+        if (petVO == null) {
+            throw new BusinessException("宠物不存在");
+        }
+        return petVO;
+    }
+
+    @Override
     public void save(PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
         int rows = petMapper.insert(petSaveDTO);

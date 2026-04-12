@@ -14,6 +14,11 @@ public interface PetMapper {
 
     List<PetVO> selectPage(PetQuery query);
 
+    /**
+     * 根据宠物 ID 查询前台展示所需的详情信息。
+     */
+    PetVO selectById(@Param("id") Long id);
+
     Pet selectEntityById(@Param("id") Long id);
 
     int insert(PetSaveDTO petSaveDTO);
