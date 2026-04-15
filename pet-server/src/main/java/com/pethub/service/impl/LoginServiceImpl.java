@@ -33,6 +33,7 @@ public class LoginServiceImpl implements LoginService {
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(jwtUtil.createToken(adminUser.getId(), adminUser.getUsername()));
 
+
         // 3. 组装前端首页右上角等位置会用到的用户信息。
         AdminUserInfoVO userInfo = new AdminUserInfoVO();
         userInfo.setId(adminUser.getId());

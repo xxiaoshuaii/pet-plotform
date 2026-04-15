@@ -14,9 +14,6 @@ public interface PetMapper {
 
     List<PetVO> selectPage(PetQuery query);
 
-    /**
-     * 根据宠物 ID 查询前台展示所需的详情信息。
-     */
     PetVO selectById(@Param("id") Long id);
 
     Pet selectEntityById(@Param("id") Long id);
@@ -29,14 +26,9 @@ public interface PetMapper {
 
     int updateStatusById(@Param("id") Long id, @Param("status") Integer status);
 
-    /**
-     * 扣减宠物库存。
-     * 仅当库存大于 0 时扣减成功，扣减为 0 后自动下架。
-     */
     int decreaseStockById(@Param("id") Long id);
 
-    /**
-     * 分类停用时，批量下架该分类下仍在上架中的宠物。
-     */
+    int increaseStockById(@Param("id") Long id);
+
     int batchOffShelfByCategoryId(@Param("categoryId") Long categoryId);
 }

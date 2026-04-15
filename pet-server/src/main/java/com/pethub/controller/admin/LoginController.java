@@ -26,6 +26,8 @@ public class LoginController {
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
         // 接收前端登录参数，调用业务层完成登录。
         log.info("用户登录：{}", loginDTO);
-        return Result.success(loginService.login(loginDTO));
+        LoginVO login = loginService.login(loginDTO);
+        log.info("用户登录结果token：{}", login.getToken());
+        return Result.success(login);
     }
 }

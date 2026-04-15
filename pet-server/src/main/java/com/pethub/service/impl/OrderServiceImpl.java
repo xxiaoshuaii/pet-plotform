@@ -44,12 +44,7 @@ public class OrderServiceImpl implements OrderService {
         List<OrderVO> records = orderMapper.selectPage(query);
         PageInfo<OrderVO> pageInfo = new PageInfo<>(records);
 
-        return new PageResultVO<>(
-                pageInfo.getList(),
-                pageInfo.getTotal(),
-                pageInfo.getPageNum(),
-                pageInfo.getPageSize()
-        );
+        return new PageResultVO<>(pageInfo.getList(), pageInfo.getTotal(), pageInfo.getPageNum(), pageInfo.getPageSize());
     }
 
     @Override
@@ -125,12 +120,18 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("订单不存在");
         }
 
+        if (shouldRestoreStock(orders.getStatus(), orderStatusDTO.getStatus())) {
+            int stockRows = petMapper.increaseStockById(orders.getPetId());
+            if (stockRows < 1) {
+                throw new BusinessException("回补宠物库存失败");
+            }
+        }
+
         int rows = orderMapper.updateStatusById(id, orderStatusDTO.getStatus());
         if (rows < 1) {
             throw new BusinessException("更新订单状态失败");
         }
 
-        // 订单状态变更后，同步刷新通知中心中对应订单的最新状态文案。
         orders.setStatus(orderStatusDTO.getStatus());
         noticeService.syncOrderStatusNotice(orders);
     }
@@ -163,6 +164,12 @@ public class OrderServiceImpl implements OrderService {
         if (orderCreateDTO.getAddress() == null || orderCreateDTO.getAddress().isBlank()) {
             throw new BusinessException("联系地址不能为空");
         }
+    }
+
+    private boolean shouldRestoreStock(Integer oldStatus, Integer newStatus) {
+        boolean toCanceledOrRefunded = newStatus != null && (newStatus == 3 || newStatus == 4);
+        boolean alreadyCanceledOrRefunded = oldStatus != null && (oldStatus == 3 || oldStatus == 4);
+        return toCanceledOrRefunded && !alreadyCanceledOrRefunded;
     }
 
     private String generateOrderNo() {
