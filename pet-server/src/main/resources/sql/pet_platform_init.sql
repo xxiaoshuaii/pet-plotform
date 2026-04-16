@@ -216,4 +216,35 @@ VALUES
 (2, 1, 2, 1, 'admin', '订单已完成交付', '2026-04-03 17:00:00'),
 (3, 3, 4, 2, 'reviewer', '用户申请退款，审核通过', '2026-04-04 19:10:00');
 
+CREATE TABLE ai_chat_session (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '会话ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    title VARCHAR(100) NOT NULL COMMENT '会话标题',
+    last_message_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最后消息时间',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_ai_chat_session_user_id (user_id),
+    INDEX idx_ai_chat_session_last_message_time (last_message_time)
+) COMMENT='AI 会话表';
+
+CREATE TABLE ai_chat_message (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '消息ID',
+    session_id BIGINT NOT NULL COMMENT '会话ID',
+    role VARCHAR(20) NOT NULL COMMENT '角色 user/assistant/system',
+    content TEXT NOT NULL COMMENT '消息内容',
+    images TEXT DEFAULT NULL COMMENT '图片 JSON 数组',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_ai_chat_message_session_id (session_id),
+    INDEX idx_ai_chat_message_create_time (create_time)
+) COMMENT='AI 会话消息表';
+
+ALTER TABLE ai_chat_session
+    ADD CONSTRAINT fk_ai_chat_session_user_id FOREIGN KEY (user_id) REFERENCES user(id);
+
+ALTER TABLE ai_chat_message
+    ADD CONSTRAINT fk_ai_chat_message_session_id FOREIGN KEY (session_id) REFERENCES ai_chat_session(id);
+
 SET FOREIGN_KEY_CHECKS = 1;
