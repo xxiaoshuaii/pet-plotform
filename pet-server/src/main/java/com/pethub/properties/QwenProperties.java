@@ -28,7 +28,12 @@ public class QwenProperties {
     /**
      * 默认模型名。
      */
-    private String model = "qwen-plus";
+    private String model = "qwen3.6-plus";
+
+    /**
+     * 视觉模型名，处理图片理解时使用。
+     */
+    private String visionModel = "qwen3.6-plus";
 
     /**
      * 生成温度。
