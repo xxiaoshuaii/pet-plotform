@@ -13,32 +13,31 @@ import com.pethub.pojo.vo.AiChatMessageVO;
 import com.pethub.pojo.vo.AiChatSessionVO;
 import com.pethub.properties.QwenProperties;
 import com.pethub.service.AiAssistantService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
 public class AiAssistantServiceImpl implements AiAssistantService {
 
-    private static final String SYSTEM_PROMPT = "你是 PetHub 的宠物咨询助手，请直接用中文回答用户问题。"
-            + " 回答要专业、温和、易懂。"
-            + " 如果信息不足，先说明限制，再给出可执行建议。"
-            + " 如果用户提供了图片链接，也请结合图片信息一起分析。";
+    private static final String SYSTEM_PROMPT = """
+            你是 PetHub 的宠物咨询助手，请直接用中文回答用户问题。
+            回答要专业、温和、易懂。
+            如果信息不足，先说明限制，再给出可执行建议。
+            如果用户提供了图片链接，也请结合图片信息一起分析。
+            """;
 
-    private static final int MAX_HISTORY_MESSAGES = 12;
     private static final int MAX_SESSION_TITLE_LENGTH = 12;
 
     private final ChatClient.Builder chatClientBuilder;
@@ -46,35 +45,62 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     private final AiChatSessionMapper aiChatSessionMapper;
     private final AiChatMessageMapper aiChatMessageMapper;
     private final ObjectMapper objectMapper;
+    private final SpringAiChatMemory chatMemory;
 
     @Override
-    public Flux<String> consultStream(AiConsultDTO aiConsultDTO) {
-        validate(aiConsultDTO);
+    public void consultStream(AiConsultDTO aiConsultDTO, SseEmitter emitter, HttpServletResponse response) {
+        try {
+            validate(aiConsultDTO);
 
-        Long userId = BaseContext.getCurrentId();
-        if (userId == null) {
-            throw new BusinessException("请先登录后再使用 AI 助手");
+            Long userId = BaseContext.getCurrentId();
+            if (userId == null) {
+                emitter.completeWithError(new BusinessException("请先登录后再使用 AI 助手"));
+                return;
+            }
+
+            AiChatSession session = resolveSession(userId, aiConsultDTO);
+            String conversationId = String.valueOf(session.getId());
+            String userMessage = aiConsultDTO.getMessage().trim();
+
+            //为什么这里要设置响应头,响应给谁
+            response.setHeader("X-AI-Session-Id", String.valueOf(session.getId()));
+            response.setHeader("Cache-Control", "no-cache");
+            response.setHeader("X-Accel-Buffering", "no");
+
+            chatMemory.prepareUserMessage(conversationId, aiConsultDTO.getImages());
+
+            Flux<String> stream = chatClientBuilder
+                    .build()
+                    .prompt()
+                    .system(SYSTEM_PROMPT)
+                    .user(appendImagesToMessage(userMessage, aiConsultDTO.getImages()))
+                    .advisors(MessageChatMemoryAdvisor.builder(chatMemory)
+                            .conversationId(conversationId)
+                            .build())
+                    .stream()
+                    .content();
+
+            //chunk代表什么
+            stream.subscribe(
+                    chunk -> {
+                        try {
+                            emitter.send(SseEmitter.event().data(chunk));
+                        }
+                        catch (IOException e) {
+                            emitter.completeWithError(e);
+                        }
+                    },
+                    emitter::completeWithError,
+                    emitter::complete
+            );
         }
-
-        AiChatSession session = resolveSession(userId, aiConsultDTO);
-        saveUserMessage(session, aiConsultDTO.getMessage().trim(), aiConsultDTO.getImages());
-
-        List<Message> messages = buildMessages(session.getId());
-        Prompt prompt = new Prompt(messages);
-        StringBuilder assistantContent = new StringBuilder();
-        AtomicBoolean saved = new AtomicBoolean(false);
-
-        return chatClientBuilder
-                .build()
-                .prompt(prompt)
-                .stream()
-                .content()
-                .doOnNext(assistantContent::append)
-                .doOnComplete(() -> saveAssistantMessageIfNecessary(session, assistantContent, saved))
-                .doOnError(error -> saveAssistantMessageIfNecessary(session, assistantContent, saved));
+        catch (Exception e) {
+            emitter.completeWithError(e);
+        }
     }
 
     @Override
+    //sql语句的理解
     public List<AiChatSessionVO> listSessions(Long userId) {
         return aiChatSessionMapper.selectListByUserId(userId);
     }
@@ -109,7 +135,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        aiChatMessageMapper.softDeleteBySessionId(sessionId, now);
+        chatMemory.clear(String.valueOf(sessionId));
         aiChatSessionMapper.softDeleteByIdAndUserId(sessionId, userId, now);
     }
 
@@ -134,75 +160,6 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         return session;
     }
 
-    private void saveUserMessage(AiChatSession session, String content, List<String> images) {
-        LocalDateTime now = LocalDateTime.now();
-        AiChatMessage message = new AiChatMessage();
-        message.setSessionId(session.getId());
-        message.setRole("user");
-        message.setContent(content);
-        message.setImages(writeImages(images));
-        message.setCreateTime(now);
-        message.setUpdateTime(now);
-        aiChatMessageMapper.insert(message);
-        aiChatSessionMapper.touchSession(session.getId(), session.getTitle(), now, now);
-    }
-
-    private void saveAssistantMessageIfNecessary(AiChatSession session, StringBuilder assistantContent, AtomicBoolean saved) {
-        if (!saved.compareAndSet(false, true)) {
-            return;
-        }
-        String content = assistantContent.toString().trim();
-        if (content.isEmpty()) {
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        AiChatMessage message = new AiChatMessage();
-        message.setSessionId(session.getId());
-        message.setRole("assistant");
-        message.setContent(content);
-        message.setImages(writeImages(Collections.emptyList()));
-        message.setCreateTime(now);
-        message.setUpdateTime(now);
-        aiChatMessageMapper.insert(message);
-        aiChatSessionMapper.touchSession(session.getId(), session.getTitle(), now, now);
-    }
-
-    private List<Message> buildMessages(Long sessionId) {
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(SYSTEM_PROMPT));
-
-        List<AiChatMessage> history = aiChatMessageMapper.selectRecentBySessionId(sessionId, MAX_HISTORY_MESSAGES);
-        for (AiChatMessage historyMessage : history) {
-            Message message = toMessage(historyMessage);
-            if (message != null) {
-                messages.add(message);
-            }
-        }
-        return messages;
-    }
-
-    private Message toMessage(AiChatMessage historyMessage) {
-        if (historyMessage == null || historyMessage.getContent() == null || historyMessage.getContent().isBlank()) {
-            return null;
-        }
-
-        String role = historyMessage.getRole();
-        String content = historyMessage.getContent().trim();
-        List<String> images = parseImages(historyMessage.getImages());
-        if ("user".equalsIgnoreCase(role) && !images.isEmpty()) {
-            content = content + "\n\n图片链接：" + String.join("，", images);
-        }
-
-        if ("assistant".equalsIgnoreCase(role)) {
-            return new AssistantMessage(content);
-        }
-        if ("system".equalsIgnoreCase(role)) {
-            return new SystemMessage(content);
-        }
-        return new UserMessage(content);
-    }
-
     private String buildSessionTitle(String content, List<String> images) {
         String normalized = content == null ? "" : content.trim();
         if (normalized.isEmpty()) {
@@ -213,12 +170,11 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                 : normalized;
     }
 
-    private String writeImages(List<String> images) {
-        try {
-            return objectMapper.writeValueAsString(images == null ? Collections.emptyList() : images);
-        } catch (Exception e) {
-            throw new BusinessException("保存图片信息失败");
+    private String appendImagesToMessage(String content, List<String> images) {
+        if (images == null || images.isEmpty()) {
+            return content;
         }
+        return content + "\n\n图片链接: " + String.join("，", images);
     }
 
     private List<String> parseImages(String images) {
@@ -228,7 +184,8 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         try {
             return objectMapper.readValue(images, new TypeReference<>() {
             });
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             return Collections.emptyList();
         }
     }

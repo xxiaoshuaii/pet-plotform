@@ -34,4 +34,6 @@ public class QwenProperties {
      * 生成温度。
      */
     private Double temperature = 0.4D;
+
+
 }

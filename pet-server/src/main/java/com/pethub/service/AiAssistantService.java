@@ -3,13 +3,14 @@ package com.pethub.service;
 import com.pethub.pojo.dto.AiConsultDTO;
 import com.pethub.pojo.vo.AiChatMessageVO;
 import com.pethub.pojo.vo.AiChatSessionVO;
-import reactor.core.publisher.Flux;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 public interface AiAssistantService {
 
-    Flux<String> consultStream(AiConsultDTO aiConsultDTO);
+    void consultStream(AiConsultDTO aiConsultDTO, SseEmitter emitter, HttpServletResponse response);
 
     List<AiChatSessionVO> listSessions(Long userId);
 

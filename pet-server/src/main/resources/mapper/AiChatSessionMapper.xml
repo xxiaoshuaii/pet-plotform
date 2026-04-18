@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pethub.mapper.AiChatSessionMapper">
+
+    <insert id="insert" parameterType="com.pethub.pojo.entity.AiChatSession" useGeneratedKeys="true" keyProperty="id">
+        insert into ai_chat_session (
+            user_id,
+            title,
+            last_message_time,
+            create_time,
+            update_time
+        ) values (
+            #{userId},
+            #{title},
+            #{lastMessageTime},
+            #{createTime},
+            #{updateTime}
+        )
+    </insert>
+
+    <select id="selectByIdAndUserId" resultType="com.pethub.pojo.entity.AiChatSession">
+        select
+            id,
+            user_id as userId,
+            title,
+            last_message_time as lastMessageTime,
+            create_time as createTime,
+            update_time as updateTime,
+            is_deleted as isDeleted
+        from ai_chat_session
+        where id = #{id}
+          and user_id = #{userId}
+          and is_deleted = 0
+        limit 1
+    </select>
+
+    <select id="selectListByUserId" resultType="com.pethub.pojo.vo.AiChatSessionVO">
+        select
+            s.id,
+            s.title,
+            s.last_message_time as lastMessageTime,
+            s.create_time as createTime,
+            (
+                select count(1)
+                from ai_chat_message m
+                where m.session_id = s.id
+                  and m.is_deleted = 0
+            ) as messageCount
+        from ai_chat_session s
+        where s.user_id = #{userId}
+          and s.is_deleted = 0
+        order by s.last_message_time desc, s.id desc
+    </select>
+
+    <update id="touchSession">
+        update ai_chat_session
+        set
+            title = #{title},
+            last_message_time = #{lastMessageTime},
+            update_time = #{updateTime}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="touchSessionActivity">
+        update ai_chat_session
+        set
+            last_message_time = #{lastMessageTime},
+            update_time = #{updateTime}
+        where id = #{id}
+          and is_deleted = 0
+    </update>
+
+    <update id="softDeleteByIdAndUserId">
+        update ai_chat_session
+        set
+            is_deleted = 1,
+            update_time = #{updateTime}
+        where id = #{id}
+          and user_id = #{userId}
+          and is_deleted = 0
+    </update>
+
+</mapper>
