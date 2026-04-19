@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface NoticeService {
 
-    List<NoticeVO> list();
+    List<NoticeVO> list(Integer limit);
 
     Long getUnreadCount();
 

@@ -2,6 +2,7 @@ package com.pethub.service.impl;
 
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.pethub.common.cache.DashboardCacheNames;
 import com.pethub.common.exception.BusinessException;
 import com.pethub.mapper.OrderMapper;
 import com.pethub.mapper.PetMapper;
@@ -19,6 +20,8 @@ import com.pethub.pojo.vo.UserDetailVO;
 import com.pethub.service.NoticeService;
 import com.pethub.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +53,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.ORDER_TREND, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.RECENT_ORDERS, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
+    })
     @Transactional(rollbackFor = Exception.class)
     public OrderCreateVO create(Long userId, OrderCreateDTO orderCreateDTO) {
         validateCreateOrder(userId, orderCreateDTO);
@@ -121,6 +130,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.RECENT_ORDERS, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
+    })
     @Transactional(rollbackFor = Exception.class)
     public void pay(Long userId, Long id) {
         Orders orders = orderMapper.selectEntityById(id);
@@ -144,6 +158,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.ORDER_TREND, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.RECENT_ORDERS, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
+    })
     @Transactional(rollbackFor = Exception.class)
     public void cancelForUser(Long userId, Long id) {
         Orders orders = orderMapper.selectEntityById(id);
@@ -157,12 +177,37 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Current order status does not allow cancellation");
         }
 
-        updateStatus(id, new OrderStatusDTO(null, 3));
+        updateStatusInternal(id, new OrderStatusDTO(null, 3));
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.ORDER_TREND, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.RECENT_ORDERS, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
+    })
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, OrderStatusDTO orderStatusDTO) {
+        updateStatusInternal(id, orderStatusDTO);
+    }
+
+    @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.ORDER_TREND, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.RECENT_ORDERS, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
+    })
+    public boolean removeById(Long id) {
+        Orders orders = orderMapper.selectEntityById(id);
+        if (orders == null) {
+            throw new BusinessException("Order does not exist");
+        }
+        return orderMapper.deleteById(id) > 0;
+    }
+
+    private void updateStatusInternal(Long id, OrderStatusDTO orderStatusDTO) {
         if (orderStatusDTO.getStatus() == null) {
             throw new BusinessException("Order status cannot be empty");
         }
@@ -190,15 +235,6 @@ public class OrderServiceImpl implements OrderService {
 
         orders.setStatus(orderStatusDTO.getStatus());
         noticeService.syncOrderStatusNotice(orders);
-    }
-
-    @Override
-    public boolean removeById(Long id) {
-        Orders orders = orderMapper.selectEntityById(id);
-        if (orders == null) {
-            throw new BusinessException("Order does not exist");
-        }
-        return orderMapper.deleteById(id) > 0;
     }
 
     private void validateCreateOrder(Long userId, OrderCreateDTO orderCreateDTO) {

@@ -1,5 +1,6 @@
 package com.pethub.service.impl;
 
+import com.pethub.common.cache.DashboardCacheNames;
 import com.pethub.common.exception.BusinessException;
 import com.pethub.mapper.NoticeMapper;
 import com.pethub.pojo.entity.Notice;
@@ -7,6 +8,7 @@ import com.pethub.pojo.entity.Orders;
 import com.pethub.pojo.vo.NoticeVO;
 import com.pethub.service.NoticeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,8 +20,8 @@ public class NoticeServiceImpl implements NoticeService {
     private final NoticeMapper noticeMapper;
 
     @Override
-    public List<NoticeVO> list() {
-        return noticeMapper.selectList();
+    public List<NoticeVO> list(Integer limit) {
+        return noticeMapper.selectList(limit);
     }
 
     @Override
@@ -29,30 +31,32 @@ public class NoticeServiceImpl implements NoticeService {
     }
 
     @Override
+    @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
     public void readById(Long id) {
         Notice notice = noticeMapper.selectEntityById(id);
         if (notice == null) {
-            throw new BusinessException("通知不存在");
+            throw new BusinessException("Notice does not exist");
         }
 
         int rows = noticeMapper.readById(id);
         if (rows < 1) {
-            throw new BusinessException("标记已读失败");
+            throw new BusinessException("Failed to mark notice as read");
         }
     }
 
     @Override
+    @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
     public void readAll() {
         noticeMapper.readAll();
     }
 
     @Override
+    @CacheEvict(cacheNames = DashboardCacheNames.NOTICES, allEntries = true)
     public void syncOrderStatusNotice(Orders orders) {
         if (orders == null || orders.getId() == null || orders.getStatus() == null) {
             return;
         }
 
-        // 同一订单只保留一条最新通知，避免历史通知被一起改成相同状态后出现重复展示。
         noticeMapper.softDeleteByOrderId(orders.getId());
 
         Notice notice = new Notice();
@@ -96,6 +100,6 @@ public class NoticeServiceImpl implements NoticeService {
             case 4 -> "已退款";
             default -> "已更新";
         };
-        return "订单 " + displayOrderNo + " 当前状态为" + statusText;
+        return "订单 " + displayOrderNo + " 当前状态为 " + statusText;
     }
 }

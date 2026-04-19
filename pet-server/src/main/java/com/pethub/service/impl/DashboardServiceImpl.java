@@ -1,5 +1,6 @@
 package com.pethub.service.impl;
 
+import com.pethub.common.cache.DashboardCacheNames;
 import com.pethub.pojo.query.CategoryQuery;
 import com.pethub.pojo.query.OrderQuery;
 import com.pethub.pojo.query.PetQuery;
@@ -23,6 +24,7 @@ import com.pethub.service.PetService;
 import com.pethub.service.PostService;
 import com.pethub.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -51,6 +53,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final CategoryService categoryService;
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.OVERVIEW)
     public DashboardOverviewVO getOverview() {
         PageResultVO<UserVO> userPage = userService.page(buildUserQuery(1));
         PageResultVO<PetVO> petPage = petService.page(buildPetQuery(LARGE_PAGE_SIZE));
@@ -74,11 +77,13 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.ORDER_TREND)
     public List<OrderTrendItemVO> getOrderTrend() {
         return buildOrderTrend(defaultList(orderService.page(buildOrderQuery(LARGE_PAGE_SIZE)).getRecords()), LocalDate.now());
     }
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.CATEGORY_PIE)
     public List<CategoryPieItemVO> getCategoryPie() {
         List<PetVO> pets = defaultList(petService.page(buildPetQuery(LARGE_PAGE_SIZE)).getRecords());
         List<CategoryVO> categories = defaultList(categoryService.page(buildCategoryQuery(LARGE_PAGE_SIZE)).getRecords());
@@ -86,18 +91,21 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.RECENT_ORDERS)
     public List<OrderVO> getRecentOrders() {
         return limitList(defaultList(orderService.page(buildOrderQuery(LARGE_PAGE_SIZE)).getRecords()), RECENT_SIZE);
     }
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.RECENT_POSTS)
     public List<PostVO> getRecentPosts() {
         return limitList(defaultList(postService.page(buildPostQuery(LARGE_PAGE_SIZE)).getRecords()), RECENT_SIZE);
     }
 
     @Override
+    @Cacheable(cacheNames = DashboardCacheNames.NOTICES)
     public List<NoticeVO> getLatestNotices() {
-        return limitList(defaultList(noticeService.list()), NOTICE_SIZE);
+        return defaultList(noticeService.list(NOTICE_SIZE));
     }
 
     private UserQuery buildUserQuery(int pageSize) {

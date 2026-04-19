@@ -6,6 +6,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.pethub.common.cache.DashboardCacheNames;
 import com.pethub.common.exception.BusinessException;
 import com.pethub.mapper.CategoryMapper;
 import com.pethub.mapper.PetMapper;
@@ -19,6 +20,7 @@ import com.pethub.pojo.vo.PetVO;
 import com.pethub.service.PetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -101,6 +103,10 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.CATEGORY_PIE, allEntries = true)
+    })
     public void save(PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
         normalizeStatusByStock(petSaveDTO);
@@ -112,7 +118,10 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "pet", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.CATEGORY_PIE, allEntries = true)
+    })
     public void update(Long id, PetSaveDTO petSaveDTO) {
         validatePetSaveDTO(petSaveDTO);
         normalizeStatusByStock(petSaveDTO);
@@ -130,7 +139,10 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "pet", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.CATEGORY_PIE, allEntries = true)
+    })
     public boolean removeById(Long id) {
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
@@ -144,7 +156,10 @@ public class PetServiceImpl implements PetService {
     }
 
     @Override
-    @CacheEvict(cacheNames = "pet", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = DashboardCacheNames.OVERVIEW, allEntries = true),
+            @CacheEvict(cacheNames = DashboardCacheNames.CATEGORY_PIE, allEntries = true)
+    })
     public void updateStatus(Long id, PetStatusDTO petStatusDTO) {
         if (petStatusDTO.getStatus() == null) {
             throw new BusinessException("Pet status cannot be empty");

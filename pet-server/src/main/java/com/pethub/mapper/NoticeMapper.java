@@ -10,7 +10,7 @@ import java.util.List;
 @Mapper
 public interface NoticeMapper {
 
-    List<NoticeVO> selectList();
+    List<NoticeVO> selectList(@Param("limit") Integer limit);
 
     Notice selectEntityById(@Param("id") Long id);
 

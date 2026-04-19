@@ -30,5 +30,7 @@ public interface PetMapper {
 
     int increaseStockById(@Param("id") Long id);
 
+    List<Long> selectIdsByCategoryId(@Param("categoryId") Long categoryId);
+
     int batchOffShelfByCategoryId(@Param("categoryId") Long categoryId);
 }

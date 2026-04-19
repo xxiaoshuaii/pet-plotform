@@ -167,6 +167,13 @@
           and is_deleted = 0
     </update>
 
+    <select id="selectIdsByCategoryId" resultType="java.lang.Long">
+        select id
+        from pet
+        where category_id = #{categoryId}
+          and is_deleted = 0
+    </select>
+
     <update id="batchOffShelfByCategoryId">
         update pet
         set status = 0
