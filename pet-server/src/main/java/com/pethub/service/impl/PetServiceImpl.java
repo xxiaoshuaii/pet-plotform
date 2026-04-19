@@ -64,7 +64,7 @@ public class PetServiceImpl implements PetService {
             return JSONUtil.toBean(json, PetVO.class);
         }
         if (json != null) {
-            throw new BusinessException("宠物不存在");
+            throw new BusinessException("Pet does not exist");
         }
 
         String lockKey = "lock:pet:" + id;
@@ -81,13 +81,13 @@ public class PetServiceImpl implements PetService {
                 return JSONUtil.toBean(json, PetVO.class);
             }
             if (json != null) {
-                throw new BusinessException("宠物不存在");
+                throw new BusinessException("Pet does not exist");
             }
 
             PetVO petVO = petMapper.selectById(id);
             if (petVO == null) {
                 redisTemplate.opsForValue().set(key, "", 5, TimeUnit.MINUTES);
-                throw new BusinessException("宠物不存在");
+                throw new BusinessException("Pet does not exist");
             }
 
             long ttl = 60L + RandomUtil.randomInt(10);
@@ -107,7 +107,7 @@ public class PetServiceImpl implements PetService {
 
         int rows = petMapper.insert(petSaveDTO);
         if (rows < 1) {
-            throw new BusinessException("新增宠物失败");
+            throw new BusinessException("Failed to create pet");
         }
     }
 
@@ -119,13 +119,14 @@ public class PetServiceImpl implements PetService {
 
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
-            throw new BusinessException("宠物不存在");
+            throw new BusinessException("Pet does not exist");
         }
 
         int rows = petMapper.updateById(id, petSaveDTO);
         if (rows < 1) {
-            throw new BusinessException("更新宠物失败");
+            throw new BusinessException("Failed to update pet");
         }
+        evictPetCache(id);
     }
 
     @Override
@@ -133,34 +134,39 @@ public class PetServiceImpl implements PetService {
     public boolean removeById(Long id) {
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
-            throw new BusinessException("宠物不存在");
+            throw new BusinessException("Pet does not exist");
         }
-        return petMapper.deleteById(id) > 0;
+        boolean removed = petMapper.deleteById(id) > 0;
+        if (removed) {
+            evictPetCache(id);
+        }
+        return removed;
     }
 
     @Override
     @CacheEvict(cacheNames = "pet", key = "#id")
     public void updateStatus(Long id, PetStatusDTO petStatusDTO) {
         if (petStatusDTO.getStatus() == null) {
-            throw new BusinessException("宠物状态不能为空");
+            throw new BusinessException("Pet status cannot be empty");
         }
 
         Pet pet = petMapper.selectEntityById(id);
         if (pet == null) {
-            throw new BusinessException("宠物不存在");
+            throw new BusinessException("Pet does not exist");
         }
 
         if (petStatusDTO.getStatus() == 1) {
             ensureCategoryEnabled(pet.getCategoryId());
             if (pet.getStock() == null || pet.getStock() <= 0) {
-                throw new BusinessException("库存小于等于 0 的宠物不能上架");
+                throw new BusinessException("Pets with stock less than or equal to 0 cannot be listed");
             }
         }
 
         int rows = petMapper.updateStatusById(id, petStatusDTO.getStatus());
         if (rows < 1) {
-            throw new BusinessException("更新宠物状态失败");
+            throw new BusinessException("Failed to update pet status");
         }
+        evictPetCache(id);
     }
 
     private boolean tryLock(String key, String threadId) {
@@ -177,34 +183,34 @@ public class PetServiceImpl implements PetService {
             Thread.sleep(100);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new BusinessException("获取宠物详情失败，请稍后重试");
+            throw new BusinessException("Failed to get pet detail, please try again later");
         }
     }
 
     private void validatePetSaveDTO(PetSaveDTO petSaveDTO) {
         if (petSaveDTO.getName() == null || petSaveDTO.getName().isBlank()) {
-            throw new BusinessException("宠物名称不能为空");
+            throw new BusinessException("Pet name cannot be empty");
         }
         if (petSaveDTO.getCategoryId() == null) {
-            throw new BusinessException("宠物分类不能为空");
+            throw new BusinessException("Pet category cannot be empty");
         }
         if (petSaveDTO.getBreed() == null || petSaveDTO.getBreed().isBlank()) {
-            throw new BusinessException("宠物品种不能为空");
+            throw new BusinessException("Pet breed cannot be empty");
         }
         if (petSaveDTO.getAge() == null) {
-            throw new BusinessException("宠物年龄不能为空");
+            throw new BusinessException("Pet age cannot be empty");
         }
         if (petSaveDTO.getPrice() == null) {
-            throw new BusinessException("宠物价格不能为空");
+            throw new BusinessException("Pet price cannot be empty");
         }
         if (petSaveDTO.getStock() == null) {
-            throw new BusinessException("宠物库存不能为空");
+            throw new BusinessException("Pet stock cannot be empty");
         }
         if (petSaveDTO.getCoverUrl() == null || petSaveDTO.getCoverUrl().isBlank()) {
-            throw new BusinessException("宠物封面图不能为空");
+            throw new BusinessException("Pet cover cannot be empty");
         }
         if (petSaveDTO.getStatus() == null) {
-            throw new BusinessException("宠物状态不能为空");
+            throw new BusinessException("Pet status cannot be empty");
         }
 
         ensureCategoryEnabled(petSaveDTO.getCategoryId());
@@ -219,10 +225,16 @@ public class PetServiceImpl implements PetService {
     private void ensureCategoryEnabled(Long categoryId) {
         Category category = categoryMapper.selectEntityById(categoryId);
         if (category == null) {
-            throw new BusinessException("宠物分类不存在");
+            throw new BusinessException("Pet category does not exist");
         }
         if (category.getStatus() != null && category.getStatus() == 0) {
-            throw new BusinessException("当前分类已停用，不能保存或上架宠物");
+            throw new BusinessException("Current category is disabled");
+        }
+    }
+
+    private void evictPetCache(Long id) {
+        if (id != null) {
+            redisTemplate.delete("pet:" + id);
         }
     }
 }

@@ -5,11 +5,14 @@ import com.pethub.common.result.Result;
 import com.pethub.pojo.dto.OrderCreateDTO;
 import com.pethub.pojo.query.OrderQuery;
 import com.pethub.pojo.vo.OrderCreateVO;
+import com.pethub.pojo.vo.OrderDetailVO;
 import com.pethub.pojo.vo.OrderVO;
 import com.pethub.pojo.vo.PageResultVO;
 import com.pethub.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,5 +46,22 @@ public class UserOrderController {
     @PostMapping
     public Result<OrderCreateVO> create(@RequestBody OrderCreateDTO orderCreateDTO) {
         return Result.success(orderService.create(BaseContext.getCurrentId(), orderCreateDTO));
+    }
+
+    @GetMapping("/{id}")
+    public Result<OrderDetailVO> getById(@PathVariable Long id) {
+        return Result.success(orderService.getByIdForUser(BaseContext.getCurrentId(), id));
+    }
+
+    @PatchMapping("/{id}/pay")
+    public Result<Void> pay(@PathVariable Long id) {
+        orderService.pay(BaseContext.getCurrentId(), id);
+        return Result.success();
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public Result<Void> cancel(@PathVariable Long id) {
+        orderService.cancelForUser(BaseContext.getCurrentId(), id);
+        return Result.success();
     }
 }

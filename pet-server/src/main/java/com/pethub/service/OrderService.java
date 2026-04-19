@@ -16,6 +16,12 @@ public interface OrderService {
 
     OrderDetailVO getById(Long id);
 
+    OrderDetailVO getByIdForUser(Long userId, Long id);
+
+    void pay(Long userId, Long id);
+
+    void cancelForUser(Long userId, Long id);
+
     void updateStatus(Long id, OrderStatusDTO orderStatusDTO);
 
     boolean removeById(Long id);
