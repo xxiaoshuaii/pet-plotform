@@ -22,12 +22,15 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
+
+    private static final Duration POST_DETAIL_CACHE_TTL = Duration.ofMinutes(30);
+    private static final Duration POST_DETAIL_VERSION_TTL = Duration.ofDays(30);
 
     private final PostMapper postMapper;
     private final StringRedisTemplate stringRedisTemplate;
@@ -48,7 +51,8 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostDetailVO getById(Long id) {
         Long currentUserId = BaseContext.getCurrentId();
-        String key = buildPostDetailCacheKey(id, currentUserId);
+        long version = getPostDetailCacheVersion(id);
+        String key = buildPostDetailCacheKey(id, currentUserId, version);
         String json = stringRedisTemplate.opsForValue().get(key);
         if (json != null) {
             return JSONUtil.toBean(json, PostDetailVO.class);
@@ -59,7 +63,7 @@ public class PostServiceImpl implements PostService {
             throw new BusinessException("Post does not exist");
         }
 
-        stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(postDetailVO));
+        stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(postDetailVO), POST_DETAIL_CACHE_TTL);
         return postDetailVO;
     }
 
@@ -194,14 +198,29 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    private String buildPostDetailCacheKey(Long postId, Long currentUserId) {
-        return "post:detail:" + postId + ":" + (currentUserId == null ? "guest" : currentUserId);
+    private String buildPostDetailCacheKey(Long postId, Long currentUserId, long version) {
+        return "post:detail:" + postId + ":" + version + ":" + (currentUserId == null ? "guest" : currentUserId);
     }
 
     private void evictPostDetailCache(Long postId) {
-        Set<String> keys = stringRedisTemplate.keys("post:detail:" + postId + ":*");
-        if (keys != null && !keys.isEmpty()) {
-            stringRedisTemplate.delete(keys);
+        String versionKey = buildPostDetailVersionKey(postId);
+        stringRedisTemplate.opsForValue().increment(versionKey);
+        stringRedisTemplate.expire(versionKey, POST_DETAIL_VERSION_TTL);
+    }
+
+    private long getPostDetailCacheVersion(Long postId) {
+        String version = stringRedisTemplate.opsForValue().get(buildPostDetailVersionKey(postId));
+        if (version == null || version.isBlank()) {
+            return 0L;
         }
+        try {
+            return Long.parseLong(version);
+        } catch (NumberFormatException ex) {
+            return 0L;
+        }
+    }
+
+    private String buildPostDetailVersionKey(Long postId) {
+        return "post:detail:version:" + postId;
     }
 }

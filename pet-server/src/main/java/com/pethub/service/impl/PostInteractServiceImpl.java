@@ -15,6 +15,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,6 +27,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PostInteractServiceImpl implements PostInteractService {
+
+    private static final Duration POST_DETAIL_VERSION_TTL = Duration.ofDays(30);
 
     private final PostMapper postMapper;
     private final PostLikeMapper postLikeMapper;
@@ -129,10 +132,9 @@ public class PostInteractServiceImpl implements PostInteractService {
     }
 
     private void evictPostDetailCache(Long postId) {
-        Set<String> keys = stringRedisTemplate.keys("post:detail:" + postId + ":*");
-        if (keys != null && !keys.isEmpty()) {
-            stringRedisTemplate.delete(keys);
-        }
+        String versionKey = "post:detail:version:" + postId;
+        stringRedisTemplate.opsForValue().increment(versionKey);
+        stringRedisTemplate.expire(versionKey, POST_DETAIL_VERSION_TTL);
     }
 
     private String buildCommentsKey(Long postId) {
